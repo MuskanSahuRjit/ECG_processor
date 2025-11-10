@@ -1,0 +1,56 @@
+`timescale 1ns/1ps
+module fir_sym_file_tb; // Parameters (match DUT)
+localparam integer TAPS        = 61;
+localparam integer COEFF_WIDTH = 16;
+localparam integer DATA_WIDTH  = 16;
+localparam integer ACC_WIDTH   = 48;
+localparam integer N_SAMPLES   = 200;
+ reg clk; reg rstn;
+  reg valid_in;reg signed [DATA_WIDTH-1:0] din;
+  wire signed [DATA_WIDTH-1:0] dout;
+  wire valid_out;// DUT instance
+fir_sym_file#(
+.TAPS(TAPS),
+.COEFF_WIDTH(COEFF_WIDTH),
+    .DATA_WIDTH(DATA_WIDTH),
+.ACC_WIDTH(ACC_WIDTH)
+  ) dut(.clk(clk),  .rstn(rstn),
+.valid_in(valid_in), .din(din),
+.dout(dout), .valid_out(valid_out)
+);  // Clock
+  initial clk = 0;
+  always #5 clk = ~clk; // 100 MHz
+ integer n; // Stimulus: impulse first, then sine
+  initial begin
+    $dumpfile("fir_sym_file_tb.vcd");
+    $dumpvars(0, fir_sym_file_tb);
+rstn = 0; valid_in = 0;
+    din = 0;
+    #20;
+rstn = 1;  // 1) Impulse response
+valid_in = 1;
+    din = 16'sd1000; // impulse magnitude
+@(posedgeclk);
+    din = 0;
+    for (n = 0; n < (TAPS + 10); n = n + 1) begin
+@(posedgeclk);
+    end
+
+    // 2) Sine wave test
+    for (n = 0; n < N_SAMPLES; n = n + 1) begin
+      din = $rtoi(1000 * $sin(2.0 * 3.14159 * n / 20.0)); // 25Hz at Fs=500Hz
+@(posedgeclk);
+    end
+
+valid_in = 0;
+    #100;
+    $finish;
+  end
+
+  // Monitor output
+  always @(posedgeclk) begin
+    if (valid_out)
+      $display("%0t: din=%d dout=%d", $time, din, dout);
+  end
+
+endmodule
