@@ -1,0 +1,33 @@
+% === FIR Band-Pass Filter for ECG ===
+fs = 250;   % Sampling rate (Hz)
+low_cutoff = 0.5;     % Low cutoff frequency (Hz)
+high_cutoff = 40;   % High cutoff frequency (Hz)
+N = 30;   % Filter order → Taps = N+1 = 31
+
+% Normalized frequencies
+wn = [low_cutoff, high_cutoff] / (fs / 2);
+
+% Design the filter (Hamming window)
+b = fir1(N, wn, 'bandpass', hamming(N+1));
+
+% Plot frequency response (optional)
+fvtool(b, 'Fs', fs)
+
+% === Convert to Q1.15 Fixed-Point ===
+b_q15 = round(b * 2^15);  % Convert to signed 16-bit Q1.15
+
+% Print Verilog-style constants
+fprintf("Verilog Q1.15 Coefficients:\n");
+for i = 1:length(b_q15)
+if b_q15(i) < 0
+fprintf("16'sd%d", b_q15(i));
+else
+fprintf("16'sd%u", b_q15(i));
+end
+if i< length(b_q15)
+fprintf(", ");
+end
+if mod(i, 4) == 0
+fprintf("\n");
+end
+end
